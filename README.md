@@ -32,3 +32,6 @@ docker-compose down
 ### XTDB / RocksDB Storage
 - **Volume**: `xtdb_data`
 - This volume is defined to store XTDB (RocksDB) data. Since XTDB runs embedded within the application (not as a separate container), this volume is prepared for future containerization of the app or for mapping data if needed.
+
+# Development Philosophy: 
+Interactive REPL-driven exploration for I/O boundaries, solidified by generative property-based testing for core financial logic.

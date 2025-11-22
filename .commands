@@ -1,0 +1,1 @@
+clj -M:poly test component:risk-guard

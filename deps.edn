@@ -1,4 +1,6 @@
-{:aliases  {:dev {:extra-paths ["development/src"]
+{:paths []
+ :deps {com.nexus-quant.ark-engine/risk-guard {:local/root "components/risk-guard"}}
+ :aliases  {:dev {:extra-paths ["development/src"]
 
                   :extra-deps {org.clojure/clojure {:mvn/version "1.12.2"}}}
 
