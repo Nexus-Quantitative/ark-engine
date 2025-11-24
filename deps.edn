@@ -1,11 +1,15 @@
-{:paths []
- :deps {com.nexus-quant.ark-engine/risk-guard {:local/root "components/risk-guard"}}
- :aliases  {:dev {:extra-paths ["development/src"]
+{:paths   []
+ :deps    {com.nexus-quant.ark-engine/risk-guard {:local/root "components/risk-guard"}}
+ :aliases {:dev  {:extra-paths ["development/src"]
 
-                  :extra-deps {org.clojure/clojure {:mvn/version "1.12.2"}}}
+                  :extra-deps  {org.clojure/clojure {:mvn/version "1.12.2"}}}
 
-            :test {:extra-paths []}
+           :test {:extra-paths ["components/risk-guard/src"
+                                "components/risk-guard/test"]
+                  :extra-deps  {org.clojure/test.check {:mvn/version "1.1.1"}
+                                lambdaisland/kaocha    {:mvn/version "1.87.1366"}}
+                  :main-opts   ["-m" "kaocha.runner"]}
 
-            :poly {:main-opts ["-m" "polylith.clj.core.poly-cli.core"]
-                   :jvm-opts ["--enable-native-access=ALL-UNNAMED"]
-                   :extra-deps {polylith/clj-poly {:mvn/version "0.3.31"}}}}}
+           :poly {:main-opts  ["-m" "polylith.clj.core.poly-cli.core"]
+                  :jvm-opts   ["--enable-native-access=ALL-UNNAMED"]
+                  :extra-deps {polylith/clj-poly {:mvn/version "0.3.31"}}}}}
