@@ -1,0 +1,18 @@
+<configuration>
+  <!-- Appender padrão para Console (System.out) -->
+  <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+    <encoder>
+      <!-- Formato limpo: Hora [Thread] Nível Logger - Mensagem -->
+      <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+    </encoder>
+  </appender>
+
+  <!-- SILENCIAR O XTDB -->
+  <!-- Só queremos saber se o XTDB explodir (ERROR) ou avisos críticos (WARN) -->
+  <logger name="xtdb" level="WARN" />
+  
+  <!-- Configuração Raiz -->
+  <root level="INFO">
+    <appender-ref ref="STDOUT" />
+  </root>
+</configuration>

@@ -1,15 +1,33 @@
+;; ROOT
 {:paths   []
- :deps    {com.nexus-quant.ark-engine/risk-guard {:local/root "components/risk-guard"}}
- :aliases {:dev  {:extra-paths ["development/src"]
 
-                  :extra-deps  {org.clojure/clojure {:mvn/version "1.12.2"}}}
+ :deps    {org.clojure/clojure                    {:mvn/version "1.11.1"}
+        ;; System Components (Logical Mapping)
+           com.nexus-quant.ark-engine/risk-guard  {:local/root "components/risk-guard"}
+           com.nexus-quant.ark-engine/connector   {:local/root "components/connector"}
+           com.nexus-quant.ark-engine/temporal-db {:local/root "components/temporal-db"}}
 
-           :test {:extra-paths ["components/risk-guard/src"
-                                "components/risk-guard/test"]
-                  :extra-deps  {org.clojure/test.check {:mvn/version "1.1.1"}
-                                lambdaisland/kaocha    {:mvn/version "1.87.1366"}}
-                  :main-opts   ["-m" "kaocha.runner"]}
+ :aliases {;; --------------------------------------------------------------------------
+  ;; DEVELOPMENT ENVIRONMENT 
+  ;; --------------------------------------------------------------------------
+           :dev       {:extra-paths ["development/src"]
+                       :extra-deps  {com.nexus-quant.ark-engine/development {:local/root "development"}}}
 
-           :poly {:main-opts  ["-m" "polylith.clj.core.poly-cli.core"]
-                  :jvm-opts   ["--enable-native-access=ALL-UNNAMED"]
-                  :extra-deps {polylith/clj-poly {:mvn/version "0.3.31"}}}}}
+  ;; --------------------------------------------------------------------------
+  ;; TEST RUNNER (Kaocha)
+  ;; --------------------------------------------------------------------------
+           
+           :run-tests {:extra-deps  {lambdaisland/kaocha    {:mvn/version "1.87.1366"}
+                                     org.clojure/test.check {:mvn/version "1.1.1"}}
+                       :extra-paths ["components/risk-guard/test"
+                                     "components/temporal-db/test"]
+                       :main-opts   ["-m" "kaocha.runner" "--config-file" "tests.edn"]}
+           
+           :test      {:extra-deps {lambdaisland/kaocha {:mvn/version "1.87.1366"}}}
+
+  ;; --------------------------------------------------------------------------
+  ;; POLYLITH TOOL (Monorepo Management)
+  ;; --------------------------------------------------------------------------
+           :poly      {:main-opts  ["-m" "polylith.clj.core.poly-cli.core"]
+                       :jvm-opts   ["--enable-native-access=ALL-UNNAMED"]
+                       :extra-deps {polylith/clj-poly {:mvn/version "0.3.31"}}}}}

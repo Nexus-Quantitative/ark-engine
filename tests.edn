@@ -1,3 +1,5 @@
 #kaocha/v1
- {:tests [{:id :unit
-           :test-paths ["components/risk-guard/test"]}]}
+ {:tests [{:id          :unit
+           :test-paths  ["components/risk-guard/test"
+                         "components/temporal-db/test"]
+           :ns-patterns ["-test$"]}]}

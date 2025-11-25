@@ -1,0 +1,17 @@
+;; components/connector/deps.edn
+{:paths ["src" "resources"]
+ :deps {org.clojure/clojure {:mvn/version "1.11.1"}
+
+        ;; --- NETWORKING & ASYNC ---
+        ;; Aleph: Asynchronous HTTP and WebSocket client/server (based on Netty)
+        aleph/aleph {:mvn/version "0.6.1"}
+
+        ;; Manifold: Stream and Deferred (Promises) primitives used by Aleph
+        manifold/manifold {:mvn/version "0.3.0"}
+
+        ;; --- JSON PARSING ---
+        ;; Cheshire: Industry standard for JSON in Clojure (fast)
+        cheshire/cheshire {:mvn/version "5.11.0"}
+
+        ;; --- LOGGING ---
+        org.clojure/tools.logging {:mvn/version "1.2.4"}}}

@@ -39,3 +39,14 @@ projects/**/pom.xml
 .calva/output-window/output.calva-repl
 .calva/repl.calva-repl
 
+# --- Ark Engine Data ---
+# Ignore local RocksDB persistence
+xtdb-data/
+xtdb-events/
+
+# Ignore temporary test files (in case any leak)
+/tmp/ark-test-*
+
+# Ignore sensitive local configurations (if any in the future)
+config.edn
+.env
