@@ -33,11 +33,10 @@ projects/**/pom.xml
 .lsp/.cache
 
 # clj-kondo
-.clj-kondo/.cache
+.clj-kondo
 
 # Calva VS Code Extension
-.calva/output-window/output.calva-repl
-.calva/repl.calva-repl
+.calva
 
 # --- Ark Engine Data ---
 # Ignore local RocksDB persistence

@@ -1,5 +1,15 @@
 #kaocha/v1
- {:tests [{:id          :unit
-           :test-paths  ["components/risk-guard/test"
-                         "components/temporal-db/test"]
-           :ns-patterns ["-test$"]}]}
+ {:tests   [{:id           :unit
+             :test-paths   ["components/risk-guard/test"
+                            "components/temporal-db/test"
+                            "components/ingestor/test"]
+             :source-paths ["components/risk-guard/src"
+                            "components/temporal-db/src"
+                            "components/connector/src"
+                            "components/ingestor/src"]
+             :ns-patterns  ["-test$"]}]
+
+  :plugins [:kaocha.plugin/filter
+            :kaocha.plugin/capture-output]
+
+  :color?  true}

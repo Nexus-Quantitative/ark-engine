@@ -1,33 +1,50 @@
-;; ROOT
-{:paths   []
+{:paths []
 
- :deps    {org.clojure/clojure                    {:mvn/version "1.11.1"}
-        ;; System Components (Logical Mapping)
-           com.nexus-quant.ark-engine/risk-guard  {:local/root "components/risk-guard"}
-           com.nexus-quant.ark-engine/connector   {:local/root "components/connector"}
-           com.nexus-quant.ark-engine/temporal-db {:local/root "components/temporal-db"}}
+ :deps {org.clojure/clojure                    {:mvn/version "1.11.1"}
+        ;; System Components
+        com.nexus-quant.ark-engine/risk-guard  {:local/root "components/risk-guard"}
+        com.nexus-quant.ark-engine/connector   {:local/root "components/connector"}
+        com.nexus-quant.ark-engine/ingestor    {:local/root "components/ingestor"}
+        com.nexus-quant.ark-engine/temporal-db {:local/root "components/temporal-db"}
+        #_#_com.nexus-quant.ark-engine/domain-model {:local/root "components/domain-model"}}
 
- :aliases {;; --------------------------------------------------------------------------
-  ;; DEVELOPMENT ENVIRONMENT 
+ :aliases
+ {;; --------------------------------------------------------------------------
+  ;; 1. ENVIRONMENTS (SAFE FOR CALVA JACK-IN)
+  ;; These aliases define "WHAT" is available, but not "HOW" to run it.
+  ;; Check these boxes in Calva to get autocomplete/REPL support.
   ;; --------------------------------------------------------------------------
-           :dev       {:extra-paths ["development/src"]
-                       :extra-deps  {com.nexus-quant.ark-engine/development {:local/root "development"}}}
+
+  :dev
+  {:extra-paths ["development/src"]
+   :extra-deps  {com.nexus-quant.ark-engine/development {:local/root "development"}}}
+
+  :test-env
+  {:extra-paths ["components/risk-guard/test"
+                 "components/temporal-db/test"
+                 "components/ingestor/test"
+                 "components/domain-model/test"]
+   :extra-deps  {lambdaisland/kaocha    {:mvn/version "1.87.1366"}
+                 org.clojure/test.check {:mvn/version "1.1.1"}
+                 ;; Required for Integration Tests running in REPL
+                 com.taoensso/carmine   {:mvn/version "3.5.0"}}}
 
   ;; --------------------------------------------------------------------------
-  ;; TEST RUNNER (Kaocha)
+  ;; 2. EXECUTORS (TERMINAL / CI ONLY)
+  ;; These aliases define the Entry Point. DO NOT use with Calva Jack-in.
+  ;; Usage: clj -M:test-env:runner-all
   ;; --------------------------------------------------------------------------
-           
-           :run-tests {:extra-deps  {lambdaisland/kaocha    {:mvn/version "1.87.1366"}
-                                     org.clojure/test.check {:mvn/version "1.1.1"}}
-                       :extra-paths ["components/risk-guard/test"
-                                     "components/temporal-db/test"]
-                       :main-opts   ["-m" "kaocha.runner" "--config-file" "tests.edn"]}
-           
-           :test      {:extra-deps {lambdaisland/kaocha {:mvn/version "1.87.1366"}}}
+
+  :runner-all
+  {:main-opts ["-m" "kaocha.runner" "--config-file" "tests.edn"]}
+
+  :runner-fast
+  {:main-opts ["-m" "kaocha.runner" "--config-file" "tests.edn" "--skip-meta" ":integration"]}
 
   ;; --------------------------------------------------------------------------
-  ;; POLYLITH TOOL (Monorepo Management)
+  ;; 3. POLYLITH TOOLING
   ;; --------------------------------------------------------------------------
-           :poly      {:main-opts  ["-m" "polylith.clj.core.poly-cli.core"]
-                       :jvm-opts   ["--enable-native-access=ALL-UNNAMED"]
-                       :extra-deps {polylith/clj-poly {:mvn/version "0.3.31"}}}}}
+  :poly
+  {:main-opts  ["-m" "polylith.clj.core.poly-cli.core"]
+   :jvm-opts   ["--enable-native-access=ALL-UNNAMED"]
+   :extra-deps {polylith/clj-poly {:mvn/version "0.3.31"}}}}}
