@@ -2,11 +2,13 @@
  {:tests   [{:id           :unit
              :test-paths   ["components/risk-guard/test"
                             "components/temporal-db/test"
-                            "components/ingestor/test"]
+                            "components/ingestor/test"
+                            "components/domain-model/test"]
              :source-paths ["components/risk-guard/src"
                             "components/temporal-db/src"
                             "components/connector/src"
-                            "components/ingestor/src"]
+                            "components/ingestor/src"
+                            "components/domain-model/src"]
              :ns-patterns  ["-test$"]}]
 
   :plugins [:kaocha.plugin/filter
