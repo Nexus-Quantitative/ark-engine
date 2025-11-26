@@ -49,3 +49,6 @@ xtdb-events/
 # Ignore sensitive local configurations (if any in the future)
 config.edn
 .env
+
+
+.knowledge
