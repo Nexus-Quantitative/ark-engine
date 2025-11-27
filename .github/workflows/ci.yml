@@ -1,21 +1,29 @@
-name: Ark Engine CI
+name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [ "main" ]
   pull_request:
-    branches: [ main ]
+    branches: [ "main" ]
+  # MANUAL TRIGGER
+  workflow_dispatch:
+    inputs:
+      force_full_suite:
+        description: 'Force Run All Tests (Bypass Incremental)'
+        required: true
+        default: true # If you click the button, it assumes you want to test everything
+        type: boolean
 
 jobs:
-  validation:
+  build:
     runs-on: ubuntu-latest
 
+    # Necessary Infrastructure (Redis)
     services:
       redis:
         image: redis:alpine
         ports:
           - 6379:6379
-        # Healthcheck is CRITICAL: CI only starts tests when Redis is ready
         options: >-
           --health-cmd "redis-cli ping"
           --health-interval 10s
@@ -23,21 +31,23 @@ jobs:
           --health-retries 5
 
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Full history for Polylith to work if necessary
 
-      - name: Prepare Java
+      - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '21'
 
-      - name: Install Clojure
+      - name: Setup Clojure
         uses: DeLaGuardo/setup-clojure@12.5
         with:
           cli: 'latest'
 
-      - name: Cache Maven Dependencies
+      - name: Cache Maven packages
         uses: actions/cache@v4
         with:
           path: ~/.m2/repository
@@ -45,7 +55,15 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-maven-
 
-      # --- THE REAL TEST ---
-      # Since 'services.redis' mapped port 6379, 'localhost' works.
-      - name: Run Polylith Tests
+      # DECISION LOGIC
+      
+      # Scenario A: Forced Manual Execution (Pure Kaocha)
+      - name: Run All Tests (Manual Force)
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.force_full_suite == true }}
+        run: clojure -M:test:runner-all
+
+      # Scenario B: Automatic Execution (Polylith Incremental)
+      # Only runs if NOT manually forced. Saves time in daily use.
+      - name: Run Smart Tests (Incremental)
+        if: ${{ github.event_name != 'workflow_dispatch' }}
         run: clojure -M:poly test :all
