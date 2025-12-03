@@ -21,7 +21,7 @@
    :xtdb/document-store {:kv-store {:xtdb/module 'xtdb.mem-kv/->kv-store}}
    :xtdb/tx-log         {:kv-store {:xtdb/module 'xtdb.mem-kv/->kv-store}}})
 
-(defn start-node! 
+(defn start-node!
   "Starts the XTDB node.
    Config keys:
      :store  -> :rocksdb (default) or :memory
@@ -35,41 +35,43 @@
                       (let [dir (or (:db-dir config) (get-default-rocksdb-dir))]
                         (println "[XTDB] Starting RocksDB at:" dir)
                         (rocksdb-topology dir)))]
-     
+
      (xt/start-node topology))))
 
 ;; --- IDENTITY HELPERS (Deterministic IDs) ---
 
 (defn- generate-candle-id [symbol timeframe timestamp]
-  ;; Example ID: :candle/BTC-USDT/1m/2025-11-24T10:00:00Z
-  ;; Deterministic IDs allow O(1) lookup without scanning indexes.
-  (keyword (str "candle/" symbol "/" timeframe "/" (str timestamp))))
+  (keyword (str "candle/" symbol "/" timeframe "/" timestamp)))
 
 ;; --- WRITE FUNCTIONS (SMART PERSISTENCE) ---
 
 (defn ingest-bar!
   "Persists a complete OHLCV bar. Valid-Time is the bar's closing time."
-  [node {:keys [symbol tf ts] :as bar}]
-  (let [id (generate-candle-id symbol tf ts)]
+  [node {:keys [symbol timeframe timestamp] :as bar}]
+  (let [id (generate-candle-id symbol timeframe timestamp)
+        ;; Remove domain model discriminator before persisting
+        clean-bar (dissoc bar :type)
+        ;; XTDB expects java.util.Date, not java.time.Instant
+        valid-time (java.util.Date/from timestamp)]
     (xt/submit-tx node [[::xt/put
-                         (assoc bar :xt/id id :doc-type :market-bar)
-                         ts]])))
+                         (assoc clean-bar :xt/id id :doc-type :market-bar)
+                         valid-time]])))
 
 (defn ingest-signal!
-  "Persists a rich decision context and strategy snapshot.
-   Valid-Time is the moment the signal was generated."
+  "Persists a rich decision context and strategy snapshot."
   [node signal-map timestamp]
   (xt/submit-tx node [[::xt/put
                        (assoc signal-map
                               :xt/id (java.util.UUID/randomUUID)
                               :doc-type :strategy-signal)
-                       timestamp]]))
+                       (java.util.Date/from timestamp)]]))
 
 ;; --- READ FUNCTIONS (TIME TRAVEL) ---
 
 (defn get-bar-at
-  "Returns the bar that existed/was closed at the specified timestamp (Valid Time Query)."
+  "Time Travel Query."
   [node symbol timeframe timestamp]
   (let [id (generate-candle-id symbol timeframe timestamp)
-        db (xt/db node timestamp)]
+        ;; Convert Instant to Date for XTDB query context
+        db (xt/db node (java.util.Date/from timestamp))]
     (xt/entity db id)))

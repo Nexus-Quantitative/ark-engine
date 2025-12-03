@@ -1,48 +1,28 @@
 (ns com.nexus-quant.ark-engine.domain-model.interface
   (:require [com.nexus-quant.ark-engine.domain-model.schemas :as schemas]
             [malli.core :as m]
-            [malli.error :as me]))
+            [malli.error :as me]
+            [clojure.string :as str]))
 
-;; Expose Schemas for external use
 (def Candle schemas/Candle)
-(def WireCandle schemas/WireCandle)
-(def StrategySignal schemas/StrategySignal)
+(def Tick schemas/Tick)
 
-(defn validate!
-  "Validates data against a schema using the custom registry.
-   Throws an ExceptionInfo with detailed human-readable errors if invalid.
-   
-   Returns: true if valid."
-  [schema data]
-  (if (m/validate schema data {:registry schemas/registry})
-    true
-    (throw (ex-info "Domain Validation Failed"
-                    {:type :schema-violation
-                     :errors (me/humanize (m/explain schema data {:registry schemas/registry}))
-                     :schema schema
-                     :data data}))))
-
-(defn coerce-candle
-  "Transform raw dirty payloads (Redis/JSON) into strict Domain Candles.
-   
-   Process:
-   1. Decodes using WireCandle (String -> BigDecimal/Instant).
-   2. Enriches with domain tags (:type :candle).
-   3. Validates against strict Candle schema.
-   
-   Throws: ExceptionInfo if coercion fails or result is invalid."
-  [raw-data]
-  (let [coerced (m/decode (m/schema schemas/WireCandle {:registry schemas/registry})
+(defn- coerce [wire-schema core-schema raw-data type-tag]
+  (let [coerced (m/decode (m/schema wire-schema {:registry schemas/registry})
                           raw-data
                           schemas/json-transformer)
-        ;; Enrich with discriminator
-        enriched (assoc coerced :type :candle)]
+        enriched (assoc coerced :type type-tag)]
 
-    ;; Final strict validation
-    (if (m/validate schemas/Candle enriched {:registry schemas/registry})
+    (if (m/validate core-schema enriched {:registry schemas/registry})
       enriched
-      (throw (ex-info "Candle Coercion Failed"
+      (throw (ex-info (str (str/capitalize (name type-tag)) " Coercion Failed")
                       {:type :schema-violation
-                       :errors (me/humanize (m/explain schemas/Candle enriched {:registry schemas/registry}))
+                       :errors (me/humanize (m/explain core-schema enriched {:registry schemas/registry}))
                        :raw raw-data
                        :coerced enriched})))))
+
+(defn coerce-candle [raw-data]
+  (coerce schemas/WireCandle schemas/Candle raw-data :candle))
+
+(defn coerce-tick [raw-data]
+  (coerce schemas/WireTick schemas/Tick raw-data :tick))

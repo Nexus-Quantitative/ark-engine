@@ -5,6 +5,7 @@
             [com.nexus-quant.ark-engine.temporal-db.interface :as db]
             [taoensso.carmine :as car]
             [xtdb.api :as xt]
+            [cheshire.core :as json] ;; NEW
             [clojure.tools.logging :as log]))
 
 ;; --- TEST CONFIGURATION ---
@@ -59,33 +60,33 @@
 
 (deftest ^:integration happy-path-ingestion
   (with-open [node (db/start-node! {:store :memory})]
-    ;; 0. SETUP: Create stream & group explicitly before worker starts
-    ;; This prevents race conditions where worker tries to read before group exists
     (car/wcar test-redis-conn (apply car/xgroup ["CREATE" TEST-STREAM TEST-GROUP "$" "MKSTREAM"]))
 
     (let [stop-worker (ingest/start! node TEST-CONFIG)]
       (try
-        (let [ts #inst "2025-01-01T12:00:00Z"
-              candle {:type :candle :symbol "BTC/USDT" :c 100.0M :tf "1m" :ts ts}]
+        ;; 2. ACTION: Publish Valid Candle (JSON)
+        (let [timestamp "2025-01-01T12:00:00Z"
+              candle {"type" "candle"
+                      "symbol" "BTC/USDT"
+                      "timeframe" "1m"
+                      "open" "99.0" "high" "105.0" "low" "99.0" "close" "100.0"
+                      "volume" "1000"
+                      "timestamp" timestamp}]
 
-          ;; 1. ACTION: Publish Valid Candle
-          (println "1. Publishing Valid Candle...")
-          (car/wcar test-redis-conn (apply car/xadd [TEST-STREAM "*" "data" (pr-str candle)]))
+          (println "1. Publishing Valid JSON Candle...")
+          (car/wcar test-redis-conn
+                    (apply car/xadd [TEST-STREAM "*" "data" (json/generate-string candle)]))
 
-          ;; 2. ASSERTION: Persistence (Async Check)
+          ;; 3. ASSERTION: Persistence
           (let [check-db (fn []
-                           ;; Force sync to ensure XTDB indexer catches up
-                           (xt/sync node (java.time.Duration/ofSeconds 1))
-                           (some? (db/get-bar node "BTC/USDT" "1m" ts)))]
+                           (xt/sync node)
+                           (some? (db/get-bar node "BTC/USDT" "1m" (java.time.Instant/parse timestamp))))]
             (is (wait-for check-db "Candle persistence in XTDB")))
 
-          ;; 3. ASSERTION: Acknowledgement
-          ;; Message should be removed from pending list (ACKed)
-          (let [check-ack (fn [] (zero? (get-pending-count)))]
-            (is (wait-for check-ack "Redis Message ACK"))))
+          ;; 4. ASSERTION: Ack
+          (is (wait-for #(zero? (get-pending-count)) "Message must be ACKed")))
 
-        (finally
-          (ingest/stop! stop-worker))))))
+        (finally (ingest/stop! stop-worker))))))
 
 (deftest ^:integration poison-message-handling
   (with-open [node (db/start-node! {:store :memory})]
@@ -122,7 +123,7 @@
         (try
           ;; 2. ACTION: Publish Valid Candle
           (println "3. Publishing Candle during DB Crash...")
-          (car/wcar test-redis-conn (apply car/xadd [TEST-STREAM "*" "data" (pr-str {:type :candle :symbol "BTC" :c 100M})]))
+          (car/wcar test-redis-conn (apply car/xadd [TEST-STREAM "*" "data" (json/generate-string {"type" "candle" "symbol" "BTC" "timeframe" "1m" "open" "100" "high" "100" "low" "100" "close" "100" "volume" "1" "timestamp" "2025-01-01T00:00:00Z"})]))
 
           ;; Wait for processing attempt (worker should fail internally and log error)
           (Thread/sleep 1000)

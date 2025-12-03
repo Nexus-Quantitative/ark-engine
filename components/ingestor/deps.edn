@@ -2,5 +2,8 @@
  :deps  {org.clojure/clojure                    {:mvn/version "1.11.1"}
          org.clojure/core.async                 {:mvn/version "1.6.673"}
          com.taoensso/carmine                   {:mvn/version "3.5.0"}
+         org.clojure/tools.logging              {:mvn/version "1.2.4"}
+         ;; NEW: Safe JSON Parsing
+         cheshire/cheshire                      {:mvn/version "5.11.0"}
          com.nexus-quant.ark-engine/temporal-db {:local/root "../temporal-db"}
-         org.clojure/tools.logging              {:mvn/version "1.2.4"}}}
+         com.nexus-quant.ark-engine/domain-model {:local/root "../domain-model"}}}

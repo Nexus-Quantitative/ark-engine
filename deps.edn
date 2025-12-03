@@ -31,7 +31,7 @@
   ;; --------------------------------------------------------------------------
   ;; 2. EXECUTORS (TERMINAL / CI ONLY)
   ;; These aliases define the Entry Point. DO NOT use with Calva Jack-in.
-  ;; Usage: clj -M:test-env:runner-all
+  ;; Usage: clj -M:test:runner-all
   ;; --------------------------------------------------------------------------
 
   :runner-all

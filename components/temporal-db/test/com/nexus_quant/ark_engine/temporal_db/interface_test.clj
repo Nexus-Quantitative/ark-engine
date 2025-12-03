@@ -5,7 +5,8 @@
             [clojure.java.io :as io])
   (:import [java.nio.file Files]
            [java.nio.file.attribute FileAttribute]
-           [java.util Date]))
+           [java.util Date]
+           [java.time Instant]))
 
 ;; --- 1. TEST GLOBAL STATE (DYNAMIC VAR) ---
 ;; This variable will "hold" the database connection during the test.
@@ -51,31 +52,23 @@
 ;; --- 5. THE CLEAN TESTS ---
 
 (deftest ingest-and-query-bar-test
-  ;; We no longer need (with-node ...), we use *node* directly
   (testing "Bitemporal ingestion of Market Bars (Candles)"
-    (let [timestamp #inst "2025-01-01T12:00:00Z"
+    (let [timestamp (Instant/parse "2025-01-01T12:00:00Z")
           bar-data  {:symbol "BTC/USDT"
-                     :tf     "1m"
-                     :o      90000M
-                     :h      91000M
-                     :l      89000M
-                     :c      90500M
-                     :v      100M
-                     :ts     timestamp}]
+                     :timeframe "1m"
+                     :open 90000M :high 91000M :low 89000M :close 90500M
+                     :volume 100M
+                     :timestamp timestamp}]
 
-      (sut/ingest-bar! *node* bar-data) ;; Use of *node*
+      (sut/ingest-bar! *node* bar-data)
       (xt/sync *node*)
 
       (let [result (sut/get-bar *node* "BTC/USDT" "1m" timestamp)]
-        (is (= 90500M (:c result))))
-
-      (let [past-time #inst "2024-12-31T23:59:59Z"
-            result (sut/get-bar *node* "BTC/USDT" "1m" past-time)]
-        (is (nil? result))))))
+        (is (= 90500M (:close result)))))))
 
 (deftest ingest-signal-test
   (testing "Strategy Signals Persistence (Audit Log)"
-    (let [now (Date.)
+    (let [now (Instant/now)
           signal {:strategy "volatility-scalper" :decision :buy :confidence 0.9}]
 
       (sut/ingest-signal! *node* signal now)
@@ -90,53 +83,35 @@
 
 
 (deftest time-travel-audit-test
-  (testing "Historical Audit: Reconstruction of price evolution over time"
-    ;; SCENARIO: The market moved.
-    ;; T1 (10:00): Bitcoin at $90k
-    ;; T2 (10:01): Bitcoin fell to $88k
-    ;; T3 (10:02): Bitcoin recovered to $92k
-    
+  (testing "Forensic reconstruction of historical states"
     (let [symbol "BTC/USDT"
-          tf     "1m"
-          t1     #inst "2025-01-01T10:00:00Z"
-          t2     #inst "2025-01-01T10:01:00Z"
-          t3     #inst "2025-01-01T10:02:00Z"]
+          timeframe "1m"
+          t1 (Instant/parse "2025-01-01T10:00:00Z")
+          t2 (Instant/parse "2025-01-01T10:01:00Z")
+          t3 (Instant/parse "2025-01-01T10:02:00Z")]
+      ;; 1. The History Happens
+      (sut/ingest-bar! *node* {:symbol symbol :timeframe timeframe :timestamp t1
+                               :close 90000M :open 90000M :high 90000M :low 90000M :volume 100M})
+      (sut/ingest-bar! *node* {:symbol symbol :timeframe timeframe :timestamp t2
+                               :close 88000M :open 88000M :high 88000M :low 88000M :volume 100M})
+      (sut/ingest-bar! *node* {:symbol symbol :timeframe timeframe :timestamp t3
+                               :close 92000M :open 92000M :high 92000M :low 92000M :volume 100M})
 
-      ;; 1. The History Happens (Sequential Ingestion)
-      (sut/ingest-bar! *node* {:symbol symbol
-                               :tf     tf
-                               :ts     t1
-                               :c      90000M})
-      (sut/ingest-bar! *node* {:symbol symbol
-                               :tf     tf
-                               :ts     t2
-                               :c      88000M})
-      (sut/ingest-bar! *node* {:symbol symbol
-                               :tf     tf
-                               :ts     t3
-                               :c      92000M})
-      
       (xt/sync *node*)
 
-      ;; 2. The Audit (Time Traveling)
-      
-      (testing "Should recover the exact value of T1 (90k)"
-        (let [bar-t1 (sut/get-bar *node* symbol tf t1)]
-          (is (= 90000M (:c bar-t1)) "The past T1 was preserved")))
-
-      (testing "Should recover the exact value of T2 (88k)"
-        (let [bar-t2 (sut/get-bar *node* symbol tf t2)]
-          (is (= 88000M (:c bar-t2)) "The past T2 (Bottom) was preserved")))
-
-      (testing "Should recover the exact value of T3 (92k)"
-        (let [bar-t3 (sut/get-bar *node* symbol tf t3)]
-          (is (= 92000M (:c bar-t3)) "The present T3 is correct")))
-      
-      ;; 3. The "Gap" Test (Interpolation or Null?)
-      ;; If we ask for the price at 10:00:30 (halfway between T1 and T2),
-      ;; our 'get-bar' searches for exact ID. Since the ID contains the candle timestamp,
-      ;; it should return nil (because there is no closed candle at 10:00:30 with that ID).
-      ;; This confirms we are not accidentally picking "neighbor" data.
+      ;; 2. The Audit
       (testing "Should not hallucinate data at timestamps without closed candle"
-        (let [t-gap #inst "2025-01-01T10:00:30Z"]
-          (is (nil? (sut/get-bar *node* symbol tf t-gap))))))))
+        (let [t-gap (Instant/parse "2025-01-01T10:00:30Z")]
+          (is (nil? (sut/get-bar *node* symbol timeframe t-gap)))))
+
+      (testing "Should recover the exact value of T1"
+        (let [bar-t1 (sut/get-bar *node* symbol timeframe t1)]
+          (is (= 90000M (:close bar-t1)))))
+
+      (testing "Should recover the exact value of T2"
+        (let [bar-t2 (sut/get-bar *node* symbol timeframe t2)]
+          (is (= 88000M (:close bar-t2)))))
+
+      (testing "Should recover the exact value of T3"
+        (let [bar-t3 (sut/get-bar *node* symbol timeframe t3)]
+          (is (= 92000M (:close bar-t3))))))))
