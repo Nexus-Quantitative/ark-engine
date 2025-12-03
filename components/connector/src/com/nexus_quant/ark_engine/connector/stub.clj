@@ -14,25 +14,32 @@
     (log/info "STUB: Subscribing to" topics)
     (future
       (loop []
-        (when-not (a/closed? output-channel)
-          ;; Simulate Ticker
-          (a/put! output-channel
-                  {:type :tick
-                   :symbol "BTC/USDT"
-                   :price (bigdec (+ 98000.0 (rand 50.0)))
-                   :ts (System/currentTimeMillis)})
+        (let [price (+ 98000.0 (rand 50.0))
+              result (a/put! output-channel
+                             {:type :candle
+                              :data {:type "candle"
+                                     :symbol "BTC/USDT"
+                                     :timeframe "1m"
+                                     :open (str price)
+                                     :high (str (+ price 10))
+                                     :low (str (- price 10))
+                                     :close (str price)
+                                     :volume (str (rand 100))
+                                     :timestamp (java.time.Instant/now)}})]
 
-          ;; Simulate Random Balance Push (Race Condition Test)
-          (when (< (rand) 0.05) ;; 5% chance
-            (a/put! output-channel
-                    {:type :account-update
-                     :total-equity (bigdec (+ 10000.0 (rand 500.0)))}))
-
-          (Thread/sleep 100)
-          (recur))))
+          (if result
+            (do
+              ;; Simulate Random Balance Push
+              (when (< (rand) 0.05)
+                (a/put! output-channel
+                        {:type :account-update
+                         :total-equity (bigdec (+ 10000.0 (rand 500.0)))}))
+              (Thread/sleep 1000)
+              (recur))
+            (log/info "STUB: Channel closed, stopping loop.")))))
     this)
 
-  (submit-order! [this order]
+  (submit-order! [_ order]
     (if-not (:client-oid order)
       ;; Simulating rejection due to lack of Idempotency
       (future {:status :rejected
@@ -45,25 +52,25 @@
 
         ;; Simulate random Exchange failure (Chaos Monkey)
         (if (< (rand) 0.01)
-          {:status :rejected :reason :engine-overload}
+          {:status :rejected
+           :reason :engine-overload}
 
           ;; Success (Ack)
-          {:status :filled
-           :client-oid (:client-oid order) ;; Echo back for confirmation
+          {:status       :filled
+           :client-oid   (:client-oid order) ;; Echo back for confirmation
            :exchange-oid (str "stub-ex-" (java.util.UUID/randomUUID))
-           :avg-price (:price order)
-           :filled-qty (:quantity order)}))))
+           :avg-price    (:price order)
+           :filled-qty   (:quantity order)}))))
 
-  (cancel-order! [this id sym]
+  (cancel-order! [_ id _sym]
     (log/info "STUB: Cancelled" id)
     true)
 
-  (get-portfolio-state [this]
+  (get-portfolio-state [_]
     {:total-equity 10000.0M
      :positions {}})
 
-  (disconnect! [this]
+  (disconnect! [_]
     (log/info "STUB: Disconnected.")))
-
 (defn create []
   (->StubExchange (atom {})))
