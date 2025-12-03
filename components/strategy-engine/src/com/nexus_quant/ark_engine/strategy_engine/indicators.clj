@@ -4,7 +4,7 @@
            [org.ta4j.core.indicators.helpers ClosePriceIndicator]
            [org.ta4j.core.indicators EMAIndicator RSIIndicator MACDIndicator]
            [org.ta4j.core.num DecimalNum]
-           [java.time ZoneId]))
+           [java.time ZoneId Duration]))
 
 ;; --- CONVERTERS (Clojure -> TA4J) ---
 
@@ -13,7 +13,9 @@
 
 (defn- candle->bar [c]
   ;; Maps Malli keys (:close, :open) to TA4J Bar
-  (BaseBar. (-> (:timestamp c) ->zoned-date-time)
+  ;; TA4J 0.15 BaseBar constructor requires Duration as first arg
+  (BaseBar. (Duration/ofMinutes 1)
+            (-> (:timestamp c) ->zoned-date-time)
             (double (:open c))
             (double (:high c))
             (double (:low c))
