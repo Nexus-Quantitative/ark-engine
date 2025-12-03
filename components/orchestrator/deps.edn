@@ -1,0 +1,10 @@
+{:paths ["src" "resources"]
+ :deps {org.clojure/clojure {:mvn/version "1.11.1"}
+        org.clojure/tools.logging {:mvn/version "1.2.4"}
+
+        ;; --- THE GANG ---
+        com.nexus-quant.ark-engine/domain-model   {:local/root "../domain-model"}
+        com.nexus-quant.ark-engine/temporal-db    {:local/root "../temporal-db"}
+        com.nexus-quant.ark-engine/strategy-engine {:local/root "../strategy-engine"}
+        com.nexus-quant.ark-engine/risk-guard     {:local/root "../risk-guard"}
+        com.nexus-quant.ark-engine/connector      {:local/root "../connector"}}}
