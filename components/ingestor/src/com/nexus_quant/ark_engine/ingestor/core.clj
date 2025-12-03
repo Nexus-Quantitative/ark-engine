@@ -20,11 +20,11 @@
 (defn- ensure-group! [conn stream group]
   (try
     (run-cmd conn car/xgroup "CREATE" stream group "$" "MKSTREAM")
-    (println "DEBUG: Group created:" group "on" stream)
+    (log/info "Group created:" group "on" stream)
     (catch Exception e
       (let [msg (.getMessage e)]
         (if (and msg (.contains msg "BUSYGROUP"))
-          (println "DEBUG: Group exists (BUSYGROUP):" group)
+          (log/info "Group exists (BUSYGROUP):" group)
           (log/error e "Failed to create group"))))))
 
 ;; --- SAFE PARSING (The Firewall) ---
@@ -58,13 +58,11 @@
 
 (defn- process-valid-event! [config xtdb-node id event]
   (let [{:keys [redis-conn stream-key group-name]} config
-        raw-data (:data event)
-        type (keyword (:type raw-data))] ;; cheshire with true flag keywordizes keys
-
-    (println "DEBUG: Processing Type:" type)
+        event-type (keyword (:type event))  ;; Extract type from top-level event
+        raw-data (:data event)]
 
     (try
-      (case type
+      (case event-type
         :candle
         (let [clean-candle (domain/coerce-candle raw-data)]
           (db/ingest-bar! xtdb-node clean-candle))
@@ -75,19 +73,23 @@
           ;; We log them or forward to an aggregator (future).
           (log/trace "Tick received:" (:price clean-tick)))
 
-        :signal
-        ;; Signals usually come internal, but if via Redis, coerce/validate here too.
-        (db/ingest-signal! xtdb-node raw-data (:ts raw-data))
+        :order-book
+        (db/ingest-snapshot! xtdb-node raw-data)
 
-        (println "DEBUG: Ignored type:" type))
+        :trade
+        (db/ingest-trade! xtdb-node raw-data)
+
+        ;; Signals usually come internal, but if via Redis, coerce/validate here too.
+        (db/ingest-signal! xtdb-node raw-data (:ts raw-data)))
 
       (run-cmd redis-conn car/xack stream-key group-name id)
-      (println "DEBUG: ACKed:" id)
 
       (catch clojure.lang.ExceptionInfo e
         ;; Schema Violation -> DLQ
         (if (= :schema-violation (:type (ex-data e)))
-          (send-to-dlq! config id (:data event) :schema-violation)
+          (do
+            (log/warn "Schema Violation Details:" (ex-data e))
+            (send-to-dlq! config id (:data event) :schema-violation))
           (throw e))) ;; Retry transient errors
       (catch Exception e
         (log/error e "Transient failure")
@@ -102,12 +104,12 @@
          stop-ch (chan)]
 
      (ensure-group! redis-conn stream-key group-name)
-     (println "DEBUG: Loop started for" consumer-name)
+     (log/info "Loop started for" consumer-name)
 
      (go-loop []
        (let [[_ port] (async/alts! [stop-ch] :default :continue)]
          (if (= port stop-ch)
-           (println "DEBUG: Worker stopped.")
+           (log/info "Worker stopped.")
            (do
              (try
                (let [messages (run-cmd redis-conn car/xreadgroup
@@ -121,7 +123,7 @@
                          (if (= status :ok)
                            (process-valid-event! final-config xtdb-node id payload)
                            (send-to-dlq! final-config id fields reason)))))))
-               (catch Exception e (println "Loop Error:" (.getMessage e))))
+               (catch Exception e (log/error "Loop Error:" (.getMessage e))))
              (<! (async/timeout 10))
              (recur)))))
      (fn stop-fn [] (close! stop-ch)))))
