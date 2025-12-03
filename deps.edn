@@ -7,7 +7,8 @@
         com.nexus-quant.ark-engine/ingestor    {:local/root "components/ingestor"}
         com.nexus-quant.ark-engine/temporal-db {:local/root "components/temporal-db"}
         com.nexus-quant.ark-engine/domain-model {:local/root "components/domain-model"}
-        com.nexus-quant.ark-engine/strategy-engine {:local/root "components/strategy-engine"}}
+        com.nexus-quant.ark-engine/strategy-engine {:local/root "components/strategy-engine"}
+        com.nexus-quant.ark-engine/orchestrator    {:local/root "components/orchestrator"}}
 
  :aliases
  {;; --------------------------------------------------------------------------
