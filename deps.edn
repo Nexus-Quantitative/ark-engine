@@ -6,7 +6,8 @@
         com.nexus-quant.ark-engine/connector   {:local/root "components/connector"}
         com.nexus-quant.ark-engine/ingestor    {:local/root "components/ingestor"}
         com.nexus-quant.ark-engine/temporal-db {:local/root "components/temporal-db"}
-        com.nexus-quant.ark-engine/domain-model {:local/root "components/domain-model"}}
+        com.nexus-quant.ark-engine/domain-model {:local/root "components/domain-model"}
+        com.nexus-quant.ark-engine/strategy-engine {:local/root "components/strategy-engine"}}
 
  :aliases
  {;; --------------------------------------------------------------------------
@@ -23,7 +24,8 @@
   {:extra-paths ["components/risk-guard/test"
                  "components/temporal-db/test"
                  "components/ingestor/test"
-                 "components/domain-model/test"]
+                 "components/domain-model/test"
+                 "components/strategy-engine/test"]
    :extra-deps  {lambdaisland/kaocha    {:mvn/version "1.87.1366"}
                  org.clojure/test.check {:mvn/version "1.1.1"}
                  com.taoensso/carmine   {:mvn/version "3.5.0"}}}
