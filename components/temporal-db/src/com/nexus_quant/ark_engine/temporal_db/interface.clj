@@ -46,3 +46,6 @@
      ts: The point in time to query."
   [node sym tf ts]
   (core/get-bar-at node sym tf ts))
+
+(defn get-history [node symbol timeframe limit]
+  (core/get-history node symbol timeframe limit))

@@ -52,10 +52,9 @@
         ;; Remove domain model discriminator before persisting
         clean-bar (dissoc bar :type)
         ;; XTDB expects java.util.Date, not java.time.Instant
-        valid-time (java.util.Date/from timestamp)]
-    (xt/submit-tx node [[::xt/put
-                         (assoc clean-bar :xt/id id :doc-type :market-bar)
-                         valid-time]])))
+        valid-time (java.util.Date/from timestamp)
+        doc (assoc clean-bar :xt/id id :doc-type :market-bar)]
+    (xt/submit-tx node [[::xt/put doc valid-time]])))
 
 (defn ingest-signal!
   "Persists a rich decision context and strategy snapshot."
@@ -75,3 +74,22 @@
         ;; Convert Instant to Date for XTDB query context
         db (xt/db node (java.util.Date/from timestamp))]
     (xt/entity db id)))
+
+(defn get-history
+  "Retorna os últimos N candles ordenados por tempo.
+   Vital para cálculo de indicadores (EMA, RSI)."
+  [node symbol timeframe limit]
+  (let [db (xt/db node)
+        query {:find '[ts (pull e [*])]
+               :in '[symbol tf]
+               :where '[[e :symbol symbol]
+                        [e :timeframe tf]
+                        [e :timestamp ts]
+                        [e :doc-type :market-bar]]
+               :order-by '[[ts :desc]]
+               :limit limit}
+        results (xt/q db query symbol timeframe)]
+    ;; Retorna ordenado do mais antigo para o mais novo (Cronológico)
+    (->> results
+         (map second) ;; Extrai o documento
+         (sort-by :timestamp))))
