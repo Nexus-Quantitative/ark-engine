@@ -65,6 +65,24 @@
                               :doc-type :strategy-signal)
                        (java.util.Date/from timestamp)]]))
 
+(defn ingest-trade!
+  "Persists a market trade."
+  [node trade-data]
+  (let [ts (or (:timestamp trade-data) (java.time.Instant/now))
+        doc (assoc trade-data
+                   :xt/id (java.util.UUID/randomUUID)
+                   :doc-type :market-trade)]
+    (xt/submit-tx node [[::xt/put doc (java.util.Date/from ts)]])))
+
+(defn ingest-snapshot!
+  "Persists an order book snapshot."
+  [node snapshot-data]
+  (let [ts (or (:timestamp snapshot-data) (java.time.Instant/now))
+        doc (assoc snapshot-data
+                   :xt/id (java.util.UUID/randomUUID)
+                   :doc-type :order-book-snapshot)]
+    (xt/submit-tx node [[::xt/put doc (java.util.Date/from ts)]])))
+
 ;; --- READ FUNCTIONS (TIME TRAVEL) ---
 
 (defn get-bar-at

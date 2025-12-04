@@ -35,6 +35,16 @@
   [node signal ts]
   (core/ingest-signal! node signal ts))
 
+(defn ingest-trade!
+  "Persists a market trade."
+  [node trade-data]
+  (core/ingest-trade! node trade-data))
+
+(defn ingest-snapshot!
+  "Persists an order book snapshot."
+  [node snapshot-data]
+  (core/ingest-snapshot! node snapshot-data))
+
 (defn get-bar
   "Performs a Point-in-Time query to retrieve the exact state of a candle 
    as known at a specific timestamp.
