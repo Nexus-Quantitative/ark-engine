@@ -8,7 +8,8 @@
         com.nexus-quant.ark-engine/temporal-db {:local/root "components/temporal-db"}
         com.nexus-quant.ark-engine/domain-model {:local/root "components/domain-model"}
         com.nexus-quant.ark-engine/strategy-engine {:local/root "components/strategy-engine"}
-        com.nexus-quant.ark-engine/orchestrator    {:local/root "components/orchestrator"}}
+        com.nexus-quant.ark-engine/orchestrator    {:local/root "components/orchestrator"}
+        com.nexus-quant.ark-engine/candle-aggregator {:local/root "components/candle-aggregator"}}
 
  :aliases
  {;; --------------------------------------------------------------------------
@@ -26,7 +27,8 @@
                  "components/temporal-db/test"
                  "components/ingestor/test"
                  "components/domain-model/test"
-                 "components/strategy-engine/test"]
+                 "components/strategy-engine/test"
+                 "components/candle-aggregator/test"]
    :extra-deps  {lambdaisland/kaocha    {:mvn/version "1.87.1366"}
                  org.clojure/test.check {:mvn/version "1.1.1"}
                  com.taoensso/carmine   {:mvn/version "3.5.0"}}}
@@ -42,6 +44,10 @@
 
   :runner-fast
   {:main-opts ["-m" "kaocha.runner" "--config-file" "tests.edn" "--skip-meta" ":integration"]}
+
+  :run
+  {:extra-deps {com.nexus-quant.ark-engine/cli-runner {:local/root "bases/cli-runner"}}
+   :main-opts ["-m" "com.nexus-quant.ark-engine.cli-runner.core"]}
 
   ;; --------------------------------------------------------------------------
   ;; 3. POLYLITH TOOLING

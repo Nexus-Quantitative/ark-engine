@@ -66,6 +66,44 @@
             :close (bigdec close)
             :volume (bigdec volume)}}))
 
+(defn- map-timeframe [tf]
+  (case tf
+    "1m" "1m"
+    "5m" "5m"
+    "15m" "15m"
+    "30m" "30m"
+    "1h" "1H"
+    "4h" "4H"
+    "1d" "1D"
+    "1w" "1W"
+    tf))
+
+(defn- parse-history-candle [raw symbol timeframe]
+  (let [[ts o h l c v] raw]
+    {:type "candle"
+     :symbol symbol
+     :timeframe timeframe
+     :timestamp (Long/parseLong ts)
+     :open o
+     :high h
+     :low l
+     :close c
+     :volume v}))
+
+(defn- fetch-history-impl [symbol timeframe limit]
+  (let [endpoint "/api/v2/mix/market/candles"
+        params {:symbol symbol
+                :productType "umcbl"
+                :granularity (map-timeframe timeframe)
+                :limit (str limit)} ;; Bitget might expect string
+        url (str BASE-URL endpoint)
+        resp @(http/get url {:query-params params}) ;; Blocking call
+        body (json/parse-string (slurp (:body resp)) true)]
+
+    (if (= "00000" (:code body))
+      (map #(parse-history-candle % symbol timeframe) (:data body))
+      (throw (ex-info "Bitget API Error" {:response body})))))
+
 ;; --- Error Mapping ---
 
 (def ^:const ERROR-CODE-MAP
@@ -226,7 +264,10 @@
   (disconnect! [this]
     (when-let [ws (:ws-conn @state-atom)]
       (s/close! ws))
-    (log/info "Bitget Adapter Disconnected")))
+    (log/info "Bitget Adapter Disconnected"))
+
+  (fetch-history [this symbol timeframe limit]
+    (fetch-history-impl symbol timeframe limit)))
 
 (defn create []
   (->BitgetExchange {} (atom {})))

@@ -34,4 +34,15 @@
      Used for reconciliation loops, not for high-frequency decision making.")
 
   (disconnect! [this]
-    "Terminates connections."))
+    "Terminates connections.")
+
+  (fetch-history [this symbol timeframe limit]
+    "Fetches historical candle data via REST API.
+     
+     Args:
+       symbol: Trading pair (e.g., 'BTCUSDT')
+       timeframe: Candle interval (e.g., '1h')
+       limit: Number of candles to retrieve
+     
+     Returns:
+       Sequence of maps matching the WireCandle format."))
