@@ -1,0 +1,7 @@
+{:paths ["src" "resources"]
+ :deps {org.clojure/clojure {:mvn/version "1.11.1"}
+        ;; Time Manipulation (Truncate, Duration)
+        tick/tick           {:mvn/version "0.7.5"}
+
+        ;; Domain Types (Candle Schema)
+        com.nexus-quant.ark-engine/domain-model {:local/root "../domain-model"}}}
