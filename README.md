@@ -77,10 +77,14 @@ graph TD
     subgraph Business_Logic ["Business Rules Layer"]
         RISK[risk-guard]:::logic
         STRAT[strategy-engine]:::logic
+        CANDLE[candle-aggregator]:::logic
+        ORCH[orchestrator]:::logic
         
         %% Lógica depende do Domínio
         RISK -->|Enforces| DOMAIN
         STRAT -->|Computes using| DOMAIN
+        CANDLE -->|Aggregates| DOMAIN
+        ORCH -->|Orchestrates| DOMAIN
     end
 
     %% --- CAMADA DE INFRAESTRUTURA (Mecanismos) ---
@@ -97,21 +101,24 @@ graph TD
         %% Conexões de Infra
         INGEST -.->|Reads| CONN
         INGEST -.->|Writes| DB
+        INGEST -.->|Uses| CANDLE
     end
 
     %% --- CAMADA DE APLICAÇÃO (Orquestração) ---
     subgraph App_Entry ["Application Layer (Base)"]
         CLI[cli-runner]:::base
-        TUI[tui-dashboard]:::base
+        VIZ[backtest-viz]:::base
         
         %% Aplicação amarra tudo
-        CLI ==>|Orchestrates| INGEST & STRAT
-        TUI -.->|Visualizes| RISK & DB
+        CLI ==>|Invokes| ORCH
+        VIZ -.->|Queries| DB
     end
 
     %% --- RELAÇÕES TRANSVERSAIS ---
-    STRAT -.->|Queries| DB
-    STRAT -.->|Checks| RISK
+    ORCH -.->|Fetches History| CONN
+    ORCH -.->|Reads History| DB
+    ORCH -.->|Executes| STRAT
+    ORCH -.->|Validates| RISK
 
     %% Layout forcing (Manter o DOMAIN no centro visual)
     linkStyle default stroke:#333,stroke-width:1px;
@@ -125,6 +132,8 @@ graph TD
 | **Temporal DB** | Bitemporal storage engine. Records *Valid Time* (Market Event) vs *Transaction Time* (System Knowledge) for unbiased backtesting. | `XTDB` (RocksDB) |
 | **Domain Model** | Central ontology defining strict data contracts. Acts as a firewall against dirty data. | `Malli` |
 | **Connector** | Abstraction layer for exchange connectivity. Supports idempotency and connection resilience. | `Aleph` (Netty) |
+| **Orchestrator** | System coordinator acting as the central nervous system. Manages Backtesting loops and Live Execution cycles. | `Core.Async` |
+| **Candle Aggregator** | Pure logic component for rolling up real-time ticks into OHLCV candles (1m -> 1h -> 4h). | `Clojure` |
 
 ## Getting Started
 
