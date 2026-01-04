@@ -1,48 +1,27 @@
-(ns com.nexus-quant.ark-engine.connector.interface)
+(ns com.nexus-quant.ark-engine.connector.interface
+  (:require [com.nexus-quant.ark-engine.connector.bitget :as bitget]
+            [com.nexus-quant.ark-engine.connector.protocol :as p]))
 
-(defprotocol ExchangeConnector
-  "Abstract protocol for interaction with any execution venue.
-   Enforces idempotency and standardized error handling."
+(defn initialize! [this config]
+  (p/initialize! this config))
 
-  (initialize! [this config]
-    "Initializes the connection. Returns component instance.")
+(defn subscribe! [this topics output-channel]
+  (p/subscribe! this topics output-channel))
 
-  (subscribe! [this topics output-channel]
-    "Subscribes to public OR private data feeds.
-     
-     Args:
-       topics: Vector of maps e.g., [{:type :ticker :symbol 'BTC/USDT'} {:type :execution-report}]
-       output-channel: Channel for normalized events.
-     
-     Rationale: Mixing market data and private account updates in the same stream
-     reduces race conditions between 'Order Sent' and 'Balance Updated'.")
+(defn submit-order! [this order-params]
+  (p/submit-order! this order-params))
 
-  (submit-order! [this order-params]
-    "Submits an execution order.
-     
-     CRITICAL: order-params MUST contain a unique :client-oid (UUID string).
-     This ensures idempotency. If the network fails, re-sending with the same
-     client-oid prevents double execution at the exchange level.
-     
-     Returns: Future resolving to {:status :ack} or {:status :rejected :reason ...}")
+(defn cancel-order! [this order-id symbol]
+  (p/cancel-order! this order-id symbol))
 
-  (cancel-order! [this order-id symbol]
-    "Cancels an active order.")
+(defn get-portfolio-state [this]
+  (p/get-portfolio-state this))
 
-  (get-portfolio-state [this]
-    "Synchronous fallback for portfolio snapshot. 
-     Used for reconciliation loops, not for high-frequency decision making.")
+(defn disconnect! [this]
+  (p/disconnect! this))
 
-  (disconnect! [this]
-    "Terminates connections.")
+(defn fetch-history [this symbol timeframe limit]
+  (p/fetch-history this symbol timeframe limit))
 
-  (fetch-history [this symbol timeframe limit]
-    "Fetches historical candle data via REST API.
-     
-     Args:
-       symbol: Trading pair (e.g., 'BTCUSDT')
-       timeframe: Candle interval (e.g., '1h')
-       limit: Number of candles to retrieve
-     
-     Returns:
-       Sequence of maps matching the WireCandle format."))
+(defn create-bitget-connector []
+  (bitget/create))

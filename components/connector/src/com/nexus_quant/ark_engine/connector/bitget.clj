@@ -1,5 +1,5 @@
 (ns com.nexus-quant.ark-engine.connector.bitget
-  (:require [com.nexus-quant.ark-engine.connector.interface :as i]
+  (:require [com.nexus-quant.ark-engine.connector.protocol :as p]
             [aleph.http :as http]
             [manifold.stream :as s]
             [manifold.deferred :as d]
@@ -169,7 +169,7 @@
 ;; --- Record Implementation ---
 
 (defrecord BitgetExchange [config state-atom]
-  i/ExchangeConnector
+  p/ExchangeConnector
 
   (initialize! [this cfg]
     (log/info "Initializing Bitget Adapter with config keys:" (keys cfg))
@@ -195,7 +195,7 @@
         connecting?
         (future
           (Thread/sleep 1000)
-          (i/subscribe! this topics output-channel))
+          (p/subscribe! this topics output-channel))
 
         :else
         (do
@@ -204,7 +204,7 @@
           (connect-ws! WS-URL output-channel state-atom)
           (future
             (Thread/sleep 1000)
-            (i/subscribe! this topics output-channel)))))
+            (p/subscribe! this topics output-channel)))))
     this)
 
   (submit-order! [this order-params]

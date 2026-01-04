@@ -6,6 +6,8 @@
         com.nexus-quant.ark-engine/risk-guard   {:local/root "../components/risk-guard"}
         com.nexus-quant.ark-engine/connector    {:local/root "../components/connector"}
         com.nexus-quant.ark-engine/temporal-db  {:local/root "../components/temporal-db"}
+        com.nexus-quant.ark-engine/orchestrator {:local/root "../components/orchestrator"}
+        com.nexus-quant.ark-engine/cli-runner   {:local/root "../bases/cli-runner"}
 
         ;; Dev Tools (Don't go to prod)
         #_#_djblue/portal {:mvn/version "0.57.4"}

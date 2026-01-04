@@ -1,6 +1,3 @@
-{:paths ["src" "resources"]
- :deps {org.clojure/clojure {:mvn/version "1.11.1"}
-        com.nexus-quant.ark-engine/orchestrator {:local/root "../../components/orchestrator"}
-        com.nexus-quant.ark-engine/connector {:local/root "../../components/connector"}
-        com.nexus-quant.ark-engine/temporal-db {:local/root "../../components/temporal-db"}
-        org.clojure/tools.logging {:mvn/version "1.2.4"}}}
+ {:paths ["src" "resources"]
+  :deps {org.clojure/clojure {:mvn/version "1.11.1"}
+         org.clojure/tools.logging {:mvn/version "1.2.4"}}}
