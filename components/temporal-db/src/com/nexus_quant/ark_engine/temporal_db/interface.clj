@@ -14,17 +14,34 @@
 
 (defn ingest-bar!
   "Persists aggregated OHLCV bars into the timeline.
-   
+
    Usage:
-     (ingest-bar! node {:symbol \"BTC/USDT\" 
-                        :tf \"1m\" 
-                        :o 90000 :h 91000 :l 89000 :c 90500 
-                        :v 150.5 
+     (ingest-bar! node {:symbol \"BTC/USDT\"
+                        :tf \"1m\"
+                        :o 90000 :h 91000 :l 89000 :c 90500
+                        :v 150.5
                         :ts #inst \"...\"})
-   
+
    Note: Valid-Time is set to the bar's timestamp."
   [node bar-data]
   (core/ingest-bar! node bar-data))
+
+(defn ingest-bars!
+  "Persists MANY bars in a single XTDB transaction.
+
+   Prefer this over repeated `ingest-bar!` whenever writing more than a handful
+   of bars: the tx-log cost is per transaction, not per document.
+
+   Warning: a single transaction is atomic — coerce/validate the bars BEFORE
+   calling, or one bad document rejects the whole batch."
+  [node bars]
+  (core/ingest-bars! node bars))
+
+(defn sync!
+  "Flushes the storage stack. Call before shutting the node down so the
+   on-disk size reflects compacted data rather than pending WAL."
+  [node]
+  (core/sync! node))
 
 (defn ingest-signal!
   "Persists a rich strategy decision context for future auditing.

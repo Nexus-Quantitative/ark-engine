@@ -159,11 +159,29 @@ We employ a tiered testing strategy. Ensure infrastructure is up before running 
 
 | Scope | Command | Description |
 | :--- | :--- | :--- |
-| **Quick** | `clj -M:test-env:runner-fast` | Runs **Unit Tests** only. Fast, no Docker required. |
-| **Full** | `clj -M:test-env:runner-all` | Runs **Integration + Generative**. Requires Redis. |
+| **Quick** | `clj -M:test:runner-fast` | Runs **Unit Tests** only. Fast, no Docker required. |
+| **Full** | `clj -M:test:runner-all` | Runs **Integration + Generative**. Requires Redis. |
 | **Smart** | `clj -M:poly test` | Runs tests only for **changed** components. |
 
-### 3\. Development (REPL)
+### 3\. Running the Engine
+
+Logs are JSON on the wire and decimals are strict; see
+[`docs/MEASUREMENTS.md`](docs/MEASUREMENTS.md) for the measured cost of the
+write path before loading large histories.
+
+```bash
+# Warm the bitemporal store with historical candles (public REST, no API key)
+clj -M:run backfill BTC/USDT 1h 1000
+
+# Live pipeline (requires Redis on REDIS_ADDR, default localhost:6379)
+clj -M:run publish BTC/USDT   # exchange feed -> Redis Stream "market-events"
+clj -M:run ingest             # Redis Stream -> XTDB
+```
+
+Env knobs: `XTDB_DATA_DIR`, `REDIS_ADDR`, `ARK_SYMBOLS`, `ARK_STREAM`,
+`ARK_GROUP`, `ARK_DLQ`.
+
+### 4\. Development (REPL)
 
 Start a REPL with the development profile (includes Portal, Criterium, and all components).
 

@@ -45,16 +45,43 @@
 
 ;; --- WRITE FUNCTIONS (SMART PERSISTENCE) ---
 
+(defn- bar->put-op
+  "Normaliza um candle para a operacao de escrita do XTDB.
+   Valid-Time e' o proprio timestamp da barra."
+  [{:keys [symbol timeframe timestamp] :as bar}]
+  (let [clean-bar (dissoc bar :type)]
+    [::xt/put
+     (assoc clean-bar
+            :xt/id (generate-candle-id symbol timeframe timestamp)
+            :doc-type :market-bar)
+     (java.util.Date/from timestamp)]))
+
 (defn ingest-bar!
   "Persists a complete OHLCV bar. Valid-Time is the bar's closing time."
-  [node {:keys [symbol timeframe timestamp] :as bar}]
-  (let [id (generate-candle-id symbol timeframe timestamp)
-        ;; Remove domain model discriminator before persisting
-        clean-bar (dissoc bar :type)
-        ;; XTDB expects java.util.Date, not java.time.Instant
-        valid-time (java.util.Date/from timestamp)
-        doc (assoc clean-bar :xt/id id :doc-type :market-bar)]
-    (xt/submit-tx node [[::xt/put doc valid-time]])))
+  [node bar]
+  (xt/submit-tx node [(bar->put-op bar)]))
+
+(defn ingest-bars!
+  "Persists many bars in a SINGLE transaction.
+
+   Um candle por transacao custa caro: o tx-log guarda ~1,5 KB por transacao,
+   independentemente do tamanho do documento. Agrupar em lotes de ~500 reduz
+   o numero de transacoes em duas ordens de grandeza para o mesmo dado.
+
+   Nota: coage/valide ANTES de chamar esta funcao. Como e' uma transacao unica,
+   um documento invalido derruba o lote inteiro."
+  [node bars]
+  (when (seq bars)
+    (xt/submit-tx node (mapv bar->put-op bars))))
+
+(defn sync!
+  "Forca o flush/compactacao do stack de armazenamento.
+
+   Sem isto, um processo que encerra logo apos o backfill deixa o store
+   dominado por WAL nao compactado (medido: apenas 2 SSTs contra 8 segmentos
+   de log). Chamar antes do shutdown torna o tamanho em disco representativo."
+  [node]
+  (xt/sync node))
 
 (defn ingest-signal!
   "Persists a rich decision context and strategy snapshot."
@@ -94,8 +121,11 @@
     (xt/entity db id)))
 
 (defn get-history
-  "Retorna os últimos N candles ordenados por tempo.
-   Vital para cálculo de indicadores (EMA, RSI)."
+  "Retorna os últimos N candles ordenados cronologicamente.
+   Vital para cálculo de indicadores (EMA, RSI).
+
+   O XTDB ja' devolve na ordem pedida no :order-by, entao nao ha' reordenacao
+   em memoria. O :limit corta no banco, nao depois."
   [node symbol timeframe limit]
   (let [db (xt/db node)
         query {:find '[ts (pull e [*])]
@@ -107,7 +137,7 @@
                :order-by '[[ts :desc]]
                :limit limit}
         results (xt/q db query symbol timeframe)]
-    ;; Retorna ordenado do mais antigo para o mais novo (Cronológico)
+    ;; XTDB retorna DESC (mais novo primeiro); indicadores esperam ASC
     (->> results
-         (map second) ;; Extrai o documento
-         (sort-by :timestamp))))
+         (map second)
+         (reverse))))
