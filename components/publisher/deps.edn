@@ -1,0 +1,14 @@
+{:paths ["src" "resources"]
+ :deps {org.clojure/clojure       {:mvn/version "1.11.1"}
+        org.clojure/core.async    {:mvn/version "1.6.673"}
+
+        ;; Redis Streams (XADD) — mesmo cliente do ingestor
+        com.taoensso/carmine      {:mvn/version "3.5.0"}
+
+        ;; JSON — gera o payload que o ingestor parseia
+        cheshire/cheshire         {:mvn/version "5.11.0"}
+
+        org.clojure/tools.logging {:mvn/version "1.2.4"}
+
+        ;; Feed de mercado (WebSocket do exchange)
+        com.nexus-quant.ark-engine/connector {:local/root "../connector"}}}
